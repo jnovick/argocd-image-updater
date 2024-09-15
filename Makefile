@@ -1,6 +1,6 @@
-IMAGE_NAMESPACE?=quay.io/argoprojlabs
+IMAGE_NAMESPACE?=171312943278.dkr.ecr.us-west-2.amazonaws.com
 IMAGE_NAME=argocd-image-updater
-IMAGE_TAG?=latest
+IMAGE_TAG?=allow-adding-new-helm-value
 ifdef IMAGE_NAMESPACE
 IMAGE_PREFIX=${IMAGE_NAMESPACE}/
 else
@@ -33,11 +33,6 @@ override LDFLAGS += \
 	-X ${VERSION_PACKAGE}.version=${VERSION} \
 	-X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} \
 	-X ${VERSION_PACKAGE}.buildDate=${BUILD_DATE}
-
-
-MKDOCS_DOCKER_IMAGE?=squidfunk/mkdocs-material:4.1.1
-MKDOCS_RUN_ARGS?=
-
 
 .PHONY: all
 all: prereq controller
@@ -89,6 +84,7 @@ controller:
 image: clean-image
 	docker build \
 		-t ${IMAGE_PREFIX}${IMAGE_NAME}:${IMAGE_TAG} \
+		-t ${IMAGE_PREFIX}${IMAGE_NAME}:latest \
 		--pull \
 		.
 
@@ -96,6 +92,7 @@ image: clean-image
 multiarch-image:
 	docker buildx build \
 		-t ${IMAGE_PREFIX}${IMAGE_NAME}:${IMAGE_TAG} \
+		-t ${IMAGE_PREFIX}${IMAGE_NAME}:latest \
 		--progress plain \
 		--pull \
 		--platform ${RELEASE_IMAGE_PLATFORMS} ${DOCKERX_PUSH} \
@@ -105,6 +102,7 @@ multiarch-image:
 multiarch-image-push:
 	docker buildx build \
 		-t ${IMAGE_PREFIX}${IMAGE_NAME}:${IMAGE_TAG} \
+		-t ${IMAGE_PREFIX}${IMAGE_NAME}:latest \
 		--progress plain \
 		--pull \
 		--push \
@@ -114,43 +112,4 @@ multiarch-image-push:
 .PHONY: image-push
 image-push: image
 	docker push ${IMAGE_PREFIX}${IMAGE_NAME}:${IMAGE_TAG}
-
-.PHONY: release-binaries
-release-binaries:
-	BINNAME=argocd-image-updater-linux_amd64 OUTDIR=dist/release OS=linux ARCH=amd64 make controller
-	BINNAME=argocd-image-updater-linux_arm64 OUTDIR=dist/release OS=linux ARCH=arm64 make controller
-	BINNAME=argocd-image-updater-darwin_amd64 OUTDIR=dist/release OS=darwin ARCH=amd64 make controller
-	BINNAME=argocd-image-updater-darwin_arm64 OUTDIR=dist/release OS=darwin ARCH=arm64 make controller
-	BINNAME=argocd-image-updater-win64.exe OUTDIR=dist/release OS=windows ARCH=amd64 make controller
-
-.PHONY: extract-binary
-extract-binary:
-	docker rm argocd-image-updater-${IMAGE_TAG} || true
-	docker create --name argocd-image-updater-${IMAGE_TAG} ${IMAGE_PREFIX}${IMAGE_NAME}:${IMAGE_TAG}
-	docker cp argocd-image-updater-${IMAGE_TAG}:/usr/local/bin/argocd-image-updater /tmp/argocd-image-updater_${IMAGE_TAG}_linux-amd64
-	docker rm argocd-image-updater-${IMAGE_TAG}
-
-.PHONY: lint
-lint:
-	golangci-lint run
-
-.PHONY: manifests
-manifests:
-	IMAGE_NAMESPACE=${IMAGE_NAMESPACE} ./hack/generate-manifests.sh
-
-.PHONY: codegen
-codegen: manifests
-
-.PHONY: run-test
-run-test:
-	docker run -v $(HOME)/.kube:/kube --rm -it \
-		-e ARGOCD_TOKEN \
-		${IMAGE_PREFIX}${IMAGE_NAME}:${IMAGE_TAG} \
-		--kubeconfig /kube/config \
-		--argocd-server-addr $(ARGOCD_SERVER) \
-		--grpc-web
-
-.PHONY: serve-docs
-serve-docs:
-	docker run ${MKDOCS_RUN_ARGS} --rm -it -p 8000:8000 -v ${CURRENT_DIR}:/docs ${MKDOCS_DOCKER_IMAGE} serve -a 0.0.0.0:8000
-
+	docker push ${IMAGE_PREFIX}${IMAGE_NAME}:latest

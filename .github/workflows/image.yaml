@@ -4,14 +4,10 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
-    types: [ labeled, unlabeled, opened, synchronize, reopened ]
 
 jobs:
   build_image:
-    if: github.repository == 'argoproj-labs/argocd-image-updater'
+    if: github.repository == 'jnovick/argocd-image-updater'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,26 +18,10 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and possibly push image
+      - name: Build and push image
         run: |
-          set -ex
-          MULTIARCH=no
-          PUSH=no
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            MULTIARCH=yes
-            PUSH=yes
-          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'test-arm-image') }}" == "true" ]]; then
-            MULTIARCH=yes
-          fi
-          if [[ "${PUSH}" == "yes" ]]; then
-            docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}" quay.io
-          fi
-          if [[ "${MULTIARCH}" = "yes" ]]; then
-            IMAGE_PUSH=${PUSH} make multiarch-image
-          else
-            make image
-          fi
+          docker login --username AWS --password "${DOCKER_PASSWORD}" 171312943278.dkr.ecr.us-west-2.amazonaws.com
+          IMAGE_PUSH=yes make multiarch-image
         working-directory: argocd-image-updater
         env:
-          DOCKER_USERNAME: ${{ secrets.QUAY_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.QUAY_TOKEN }}
+          DOCKER_PASSWORD: ${{ secrets.ECR_TOKEN }}
