@@ -593,6 +593,7 @@ func setHelmValue(currentValues *yaml.MapSlice, key string, value interface{}) e
 				(*parent)[parentIdx].Value = newParent
 			}
 
+			parentIdx = len(newParent) - 1
 			parent = &newParent
 			current = &newCurrent
 		}

@@ -2187,6 +2187,36 @@ func Test_SetHelmValue(t *testing.T) {
 		assert.Equal(t, expected, input)
 	})
 
+	t.Run("Multiple values with deep key", func(t *testing.T) {
+		expected := yaml.MapSlice{
+			{Key: "deployment", Value: yaml.MapSlice{
+				{Key: "image", Value: yaml.MapSlice{
+					{Key: "tag", Value: "v2.0.0"},
+				}},
+			}},
+			{Key: "job", Value: yaml.MapSlice{
+				{Key: "image", Value: yaml.MapSlice{
+					{Key: "tag", Value: "v2.0.0"},
+				}},
+			}},
+		}
+
+		input := yaml.MapSlice{
+			{Key: "deployment", Value: yaml.MapSlice{
+				{Key: "image", Value: yaml.MapSlice{
+					{Key: "tag", Value: "v2.0.0"},
+				}},
+			}},
+		}
+
+		key := "job.image.tag"
+		value := "v2.0.0"
+
+		err := setHelmValue(&input, key, value)
+		require.NoError(t, err)
+		assert.Equal(t, expected, input)
+	})
+
 	t.Run("Unexpected type for key", func(t *testing.T) {
 		input := yaml.MapSlice{
 			{Key: "image", Value: yaml.MapSlice{
